@@ -13,7 +13,7 @@ const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:5174', 'https://forefight-health-backend-690puawa5-tharun9494s-projects.vercel.app/'],
+  origin: ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:5174', 'https://forefight-health-backend-tharun9494-tharun9494s-projects.vercel.app/'],
   credentials: true
 }));
 app.use(bodyParser.json());
