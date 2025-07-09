@@ -1,4 +1,5 @@
 import Razorpay from 'razorpay';
+import { setCorsHeaders, handlePreflight } from './cors.js';
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
@@ -6,6 +7,11 @@ const razorpay = new Razorpay({
 });
 
 export default async function handler(req, res) {
+  // Handle preflight requests
+  if (handlePreflight(req, res)) return;
+
+  // Set CORS headers for all responses
+  setCorsHeaders(req, res);
   if (req.method === 'POST') {
     const { amount, currency = 'INR', receipt, notes } = req.body;
     if (!amount) {

@@ -1,6 +1,12 @@
 import crypto from 'crypto';
+import { setCorsHeaders, handlePreflight } from './cors.js';
 
 export default function handler(req, res) {
+  // Handle preflight requests
+  if (handlePreflight(req, res)) return;
+
+  // Set CORS headers for all responses
+  setCorsHeaders(req, res);
   if (req.method === 'POST') {
     const webhookBody = JSON.stringify(req.body);
     const webhookSignature = req.headers['x-razorpay-signature'];

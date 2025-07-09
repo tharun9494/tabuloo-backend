@@ -13,8 +13,16 @@ const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:5174', 'https://forefight-health-backend-tharun9494-tharun9494s-projects.vercel.app/'],
-  credentials: true
+  origin: [
+    'http://localhost:3000', 
+    'http://localhost:5173', 
+    'http://localhost:5174', 
+    'https://forefight-health-backend-tharun9494-tharun9494s-projects.vercel.app',
+    'https://forefight-patient.vercel.app'
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-razorpay-signature']
 }));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
