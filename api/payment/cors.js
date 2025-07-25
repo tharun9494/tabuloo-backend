@@ -1,4 +1,3 @@
-// CORS configuration helper
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173', 
@@ -10,15 +9,10 @@ const allowedOrigins = [
 
 export function setCorsHeaders(req, res) {
   const origin = req.headers.origin;
-  
-  // Check if the request origin is in our allowed list
   if (allowedOrigins.includes(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
-  } else {
-    // Fallback to the main frontend domain
-    res.setHeader('Access-Control-Allow-Origin', 'https://forefight-patient.vercel.app','https://www.govupalu.com/','https://govupalu.vercel.app/');
   }
-  
+  // Do not set the header if not allowed (or set to a single default, but not multiple)
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-razorpay-signature');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -27,7 +21,8 @@ export function setCorsHeaders(req, res) {
 export function handlePreflight(req, res) {
   if (req.method === 'OPTIONS') {
     setCorsHeaders(req, res);
-    return res.status(200).end();
+    res.status(200).end();
+    return true;
   }
-  return false; // Continue with normal request
-} 
+  return false;
+}
