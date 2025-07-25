@@ -5,7 +5,7 @@ const allowedOrigins = [
   'http://localhost:5174',
   'https://forefight-health-backend-tharun9494-tharun9494s-projects.vercel.app',
   'https://forefight-patient.vercel.app',
-  'https://www.govupalu.com/'
+  'https://www.govupalu.com/','https://govupalu.vercel.app/'
 ];
 
 export function setCorsHeaders(req, res) {
@@ -16,7 +16,7 @@ export function setCorsHeaders(req, res) {
     res.setHeader('Access-Control-Allow-Origin', origin);
   } else {
     // Fallback to the main frontend domain
-    res.setHeader('Access-Control-Allow-Origin', 'https://forefight-patient.vercel.app');
+    res.setHeader('Access-Control-Allow-Origin', 'https://forefight-patient.vercel.app','https://www.govupalu.com/','https://govupalu.vercel.app/');
   }
   
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
