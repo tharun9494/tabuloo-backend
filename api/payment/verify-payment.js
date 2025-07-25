@@ -2,11 +2,10 @@ import crypto from 'crypto';
 import { setCorsHeaders, handlePreflight } from './cors.js';
 
 export default function handler(req, res) {
-  // Handle preflight requests
-  if (handlePreflight(req, res)) return;
+  if (handlePreflight(req, res)) return; // Handles OPTIONS preflight
 
-  // Set CORS headers for all responses
-  setCorsHeaders(req, res);
+  setCorsHeaders(req, res); // Set CORS headers for all other requests
+
   if (req.method === 'POST') {
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
     if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
