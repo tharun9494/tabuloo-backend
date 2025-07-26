@@ -1,10 +1,14 @@
 import crypto from 'crypto';
-import { setCorsHeaders, handlePreflight } from './cors.js';
 
 export default function handler(req, res) {
-  if (handlePreflight(req, res)) return; // Handles OPTIONS preflight
+  res.setHeader('Access-Control-Allow-Origin', 'https://www.govupalu.com');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-  setCorsHeaders(req, res); // Set CORS headers for all other requests
+  if (req.method === 'OPTIONS') {
+    res.status(200).end(); // CORS preflight
+    return;
+  }
 
   if (req.method === 'POST') {
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
