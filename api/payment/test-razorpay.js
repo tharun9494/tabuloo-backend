@@ -1,10 +1,17 @@
 import Razorpay from 'razorpay';
 import { setCorsHeaders, handlePreflight } from './cors.js';
 
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET
-});
+// Function to initialize Razorpay instance
+function getRazorpayInstance() {
+  if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+    throw new Error('Razorpay credentials not configured. Please check your environment variables.');
+  }
+  
+  return new Razorpay({
+    key_id: process.env.RAZORPAY_KEY_ID,
+    key_secret: process.env.RAZORPAY_KEY_SECRET
+  });
+}
 
 export default async function handler(req, res) {
   if (handlePreflight(req, res)) return; // Handles OPTIONS preflight
@@ -23,6 +30,7 @@ export default async function handler(req, res) {
     }
 
     // Test Razorpay connection by fetching account details
+    const razorpay = getRazorpayInstance();
     const account = await razorpay.accounts.fetch();
     
     res.json({

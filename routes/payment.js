@@ -3,11 +3,17 @@ const Razorpay = require('razorpay');
 const crypto = require('crypto');
 const router = express.Router();
 
-// Initialize Razorpay instance
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET
-});
+// Function to initialize Razorpay instance
+function getRazorpayInstance() {
+  if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+    throw new Error('Razorpay credentials not configured. Please check your environment variables.');
+  }
+  
+  return new Razorpay({
+    key_id: process.env.RAZORPAY_KEY_ID,
+    key_secret: process.env.RAZORPAY_KEY_SECRET
+  });
+}
 
 // Create order endpoint
 router.post('/create-order', async (req, res) => {
@@ -21,6 +27,9 @@ router.post('/create-order', async (req, res) => {
         message: 'Amount is required'
       });
     }
+
+    // Initialize Razorpay instance
+    const razorpay = getRazorpayInstance();
 
     // Create order options
     const options = {
@@ -116,6 +125,9 @@ router.get('/payment/:paymentId', async (req, res) => {
   try {
     const { paymentId } = req.params;
     
+    // Initialize Razorpay instance
+    const razorpay = getRazorpayInstance();
+    
     const payment = await razorpay.payments.fetch(paymentId);
     
     res.json({
@@ -145,6 +157,9 @@ router.get('/payment/:paymentId', async (req, res) => {
 router.get('/order/:orderId', async (req, res) => {
   try {
     const { orderId } = req.params;
+    
+    // Initialize Razorpay instance
+    const razorpay = getRazorpayInstance();
     
     const order = await razorpay.orders.fetch(orderId);
     
