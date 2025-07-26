@@ -2,11 +2,12 @@ const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
   'http://localhost:5174',
-  'https://forefight-health-backend-tharun9494-tharun9494s-projects.vercel.app',
+  'https://forefight-health-backend-tharun9494s-projects.vercel.app/',
   'https://forefight-patient.vercel.app',
   'https://www.govupalu.com',
   'https://govupalu.vercel.app',
-  'https://govupalu.com'
+  'https://govupalu.com',
+  'https://forefight-health-backend.vercel.app/'
 ];
 
 export function setCorsHeaders(req, res) {
