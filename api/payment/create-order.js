@@ -12,18 +12,48 @@ export default async function handler(req, res) {
   setCorsHeaders(req, res); // Set CORS headers for all other requests
 
   if (req.method === 'POST') {
-    const { amount, currency = 'INR', receipt, notes } = req.body;
-    if (!amount) {
-      return res.status(400).json({ success: false, message: 'Amount is required' });
-    }
-    const options = {
-      amount: amount * 100,
-      currency,
-      receipt: receipt || `receipt_${Date.now()}`,
-      notes: notes || {}
-    };
     try {
+      // Check if Razorpay credentials are configured
+      if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+        console.error('Razorpay credentials not configured');
+        return res.status(500).json({ 
+          success: false, 
+          message: 'Payment gateway not configured',
+          error: 'RAZORPAY_KEY_ID or RAZORPAY_KEY_SECRET not found'
+        });
+      }
+
+      const { amount, currency = 'INR', receipt, notes } = req.body;
+      
+      // Validate amount
+      if (!amount || amount <= 0) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Valid amount is required (must be greater than 0)' 
+        });
+      }
+
+      // Log the request for debugging
+      console.log('Creating order with:', {
+        amount: amount,
+        currency: currency,
+        receipt: receipt,
+        notes: notes
+      });
+
+      const options = {
+        amount: Math.round(amount * 100), // Ensure it's an integer
+        currency,
+        receipt: receipt || `receipt_${Date.now()}`,
+        notes: notes || {}
+      };
+
+      console.log('Razorpay options:', options);
+
       const order = await razorpay.orders.create(options);
+      
+      console.log('Order created successfully:', order.id);
+
       res.json({
         success: true,
         order: {
@@ -37,7 +67,19 @@ export default async function handler(req, res) {
         key_id: process.env.RAZORPAY_KEY_ID
       });
     } catch (error) {
-      res.status(500).json({ success: false, message: 'Failed to create order', error: error.message });
+      console.error('Razorpay order creation error:', error);
+      
+      // More detailed error response
+      res.status(500).json({ 
+        success: false, 
+        message: 'Failed to create order', 
+        error: error.message,
+        details: {
+          code: error.code,
+          description: error.description,
+          field: error.field
+        }
+      });
     }
   } else {
     res.status(405).json({ success: false, message: 'Method not allowed' });

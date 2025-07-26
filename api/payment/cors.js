@@ -9,10 +9,17 @@ const allowedOrigins = [
 
 export function setCorsHeaders(req, res) {
   const origin = req.headers.origin;
+  
+  // Check if the request origin is in our allowed list
   if (allowedOrigins.includes(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
+  } else {
+    // For debugging: log the origin that's not allowed
+   
+    // Set a default origin for development (you can remove this in production)
+    res.setHeader('Access-Control-Allow-Origin', 'https://govupalu.vercel.app','https://www.govupalu.com/');
   }
-  // Do not set the header if not allowed (or set to a single default, but not multiple)
+  
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-razorpay-signature');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
