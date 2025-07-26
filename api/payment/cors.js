@@ -16,9 +16,10 @@ export function setCorsHeaders(req, res) {
     res.setHeader('Access-Control-Allow-Origin', origin);
   } else {
     // For debugging: log the origin that's not allowed
+    console.log('Blocked origin:', origin);
    
     // Set a default origin for development (you can remove this in production)
-    res.setHeader('Access-Control-Allow-Origin', 'https://govupalu.vercel.app','https://www.govupalu.com/');
+    res.setHeader('Access-Control-Allow-Origin', 'https://www.govupalu.com');
   }
   
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');

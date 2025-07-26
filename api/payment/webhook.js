@@ -1,14 +1,10 @@
 import crypto from 'crypto';
+import { setCorsHeaders, handlePreflight } from './cors.js';
 
 export default function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', 'https://www.govupalu.com');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  if (handlePreflight(req, res)) return; // Handles OPTIONS preflight
 
-  if (req.method === 'OPTIONS') {
-    res.status(200).end(); // CORS preflight
-    return;
-  }
+  setCorsHeaders(req, res); // Set CORS headers for all other requests
 
   if (req.method === 'POST') {
     const webhookBody = JSON.stringify(req.body);
