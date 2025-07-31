@@ -1,5 +1,10 @@
 {
     "version": 2,
+    "functions": {
+      "api/index.js": {
+        "maxDuration": 30
+      }
+    },
     "builds": [
       {
         "src": "index.js",
@@ -12,7 +17,7 @@
         "headers": [
           {
             "key": "Access-Control-Allow-Origin",
-            "value": "https://www.govupalu.com"
+            "value": "https://tabuloo-backend-p95l.vercel.app/, https://www.tabuloo.com, https://tabuloo.com"
           },
           {
             "key": "Access-Control-Allow-Methods",

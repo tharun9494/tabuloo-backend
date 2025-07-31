@@ -1,9 +1,11 @@
-import express from 'express';
-import cors from 'cors';
-import bodyParser from 'body-parser';
-import paymentRoutes from '../../routes/payment.js';
+const express = require('express');
+const cors = require('cors');
+const bodyParser = require('body-parser');
 
 const app = express();
+
+// Delay utility function
+const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 // Middleware
 app.use(cors({
@@ -11,12 +13,9 @@ app.use(cors({
     'http://localhost:3000', 
     'http://localhost:5173', 
     'http://localhost:5174', 
-    'https://forefight-health-backend-tharun9494-tharun9494s-projects.vercel.app',
-    'https://forefight-patient.vercel.app',
-    'https://www.govupalu.com',
-    'https://govupalu.vercel.app',
-    'https://govupalu.com',
-    'https://forefight-health-backend.vercel.app/'
+    'https://tabuloo-backend-p95l.vercel.app/',
+    'https://www.tabuloo.com',
+    'https://tabuloo.com'
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -25,11 +24,31 @@ app.use(cors({
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// Routes
-app.use('/payment', paymentRoutes);
+// Test delay endpoint
+app.get('/api/delay-test', async (req, res) => {
+  const delayMs = parseInt(req.query.ms) || 2000; // Default 2 seconds
+  
+  console.log(`Starting delay of ${delayMs}ms...`);
+  
+  try {
+    await delay(delayMs);
+    
+    res.json({
+      success: true,
+      message: `Delay completed after ${delayMs}ms`,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Delay failed',
+      error: error.message
+    });
+  }
+});
 
 // Health check endpoint
-app.get('/health', (req, res) => {
+app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Razorpay backend is running' });
 });
 
@@ -51,7 +70,4 @@ app.use('*', (req, res) => {
   });
 });
 
-// Vercel serverless function handler
-export default function handler(req, res) {
-  return app(req, res);
-} 
+module.exports = app; 

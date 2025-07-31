@@ -16,16 +16,13 @@ const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors({
-  origin: [
+    origin: [
     'http://localhost:3000', 
     'http://localhost:5173', 
     'http://localhost:5174', 
-    'https://forefight-health-backend-tharun9494s-projects.vercel.app/',
-    'https://forefight-patient.vercel.app',
-    'https://www.govupalu.com',
-    'https://govupalu.vercel.app',
-    'https://govupalu.com',
-    'https://forefight-health-backend.vercel.app/'
+    'https://tabuloo-backend-p95l.vercel.app/',
+    'https://www.tabuloo.com',
+    'https://tabuloo.com'
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],

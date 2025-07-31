@@ -1,6 +1,9 @@
 import Razorpay from 'razorpay';
 import { setCorsHeaders, handlePreflight } from './cors.js';
 
+// Delay utility function
+const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
 // Function to initialize Razorpay instance
 function getRazorpayInstance() {
   if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
@@ -19,11 +22,20 @@ export default async function handler(req, res) {
   setCorsHeaders(req, res); // Set CORS headers for all other requests
 
   if (req.method === 'GET') {
-    const { paymentId } = req.query;
+    const { paymentId, delayMs } = req.query;
+    
     if (!paymentId) {
       return res.status(400).json({ success: false, message: 'Missing paymentId' });
     }
+    
     try {
+      // Add delay if requested
+      if (delayMs) {
+        const delayTime = parseInt(delayMs);
+        console.log(`Adding delay of ${delayTime}ms before processing payment...`);
+        await delay(delayTime);
+      }
+      
       const razorpay = getRazorpayInstance();
       const payment = await razorpay.payments.fetch(paymentId);
       res.json({
