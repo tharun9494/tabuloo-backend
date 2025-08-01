@@ -1,10 +1,17 @@
 import Razorpay from 'razorpay';
 import { setCorsHeaders, handlePreflight } from './cors.js';
 
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET
-});
+// Function to initialize Razorpay instance
+function getRazorpayInstance() {
+  if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+    throw new Error('Razorpay credentials not configured. Please check your environment variables.');
+  }
+  
+  return new Razorpay({
+    key_id: process.env.RAZORPAY_KEY_ID,
+    key_secret: process.env.RAZORPAY_KEY_SECRET
+  });
+}
 
 export default async function handler(req, res) {
   if (handlePreflight(req, res)) return; // Handles OPTIONS preflight
@@ -13,46 +20,31 @@ export default async function handler(req, res) {
 
   if (req.method === 'POST') {
     try {
-      // Check if Razorpay credentials are configured
-      if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
-        console.error('Razorpay credentials not configured');
-        return res.status(500).json({ 
-          success: false, 
-          message: 'Payment gateway not configured',
-          error: 'RAZORPAY_KEY_ID or RAZORPAY_KEY_SECRET not found'
-        });
-      }
-
       const { amount, currency = 'INR', receipt, notes } = req.body;
-      
-      // Validate amount
-      if (!amount || amount <= 0) {
-        return res.status(400).json({ 
-          success: false, 
-          message: 'Valid amount is required (must be greater than 0)' 
+
+      // Validate required fields
+      if (!amount) {
+        return res.status(400).json({
+          success: false,
+          message: 'Amount is required'
         });
       }
 
-      // Log the request for debugging
-      console.log('Creating order with:', {
-        amount: amount,
-        currency: currency,
-        receipt: receipt,
-        notes: notes
-      });
+      // Initialize Razorpay instance
+      const razorpay = getRazorpayInstance();
 
+      // Create order options
       const options = {
-        amount: Math.round(amount * 100), // Ensure it's an integer
+        amount: amount * 100, // Convert to paise (smallest currency unit)
         currency,
         receipt: receipt || `receipt_${Date.now()}`,
         notes: notes || {}
       };
 
-      console.log('Razorpay options:', options);
-
+      // Create order with Razorpay
       const order = await razorpay.orders.create(options);
-      
-      console.log('Order created successfully:', order.id);
+
+      console.log('Order created:', order.id);
 
       res.json({
         success: true,
@@ -66,19 +58,13 @@ export default async function handler(req, res) {
         },
         key_id: process.env.RAZORPAY_KEY_ID
       });
+
     } catch (error) {
-      console.error('Razorpay order creation error:', error);
-      
-      // More detailed error response
-      res.status(500).json({ 
-        success: false, 
-        message: 'Failed to create order', 
-        error: error.message,
-        details: {
-          code: error.code,
-          description: error.description,
-          field: error.field
-        }
+      console.error('Order creation error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to create order',
+        error: error.message
       });
     }
   } else {
