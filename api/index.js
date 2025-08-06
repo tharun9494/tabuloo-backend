@@ -21,24 +21,39 @@ function getRazorpayInstance() {
   });
 }
 
-// Middleware
-app.use(cors({
-  origin: [
-    'http://localhost:3000',
-    'http://localhost:3001', 
-    'http://localhost:5173', 
-    'http://localhost:5174', 
-    'https://tabuloo-backend-p95l.vercel.app',
-    'https://www.tabuloo.com',
-    'https://tabuloo.com',
-    'https://www.govupalu.com',
-    'https://govupalu.vercel.app',
-    'https://govupalu.com'
-  ],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-razorpay-signature']
-}));
+// CORS configuration for Vercel
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:3001', 
+  'http://localhost:5173', 
+  'http://localhost:5174', 
+  'https://tabuloo-backend-p95l.vercel.app',
+  'https://www.tabuloo.com',
+  'https://tabuloo.com',
+  'https://www.govupalu.com',
+  'https://govupalu.vercel.app',
+  'https://govupalu.com'
+];
+
+// Custom CORS middleware to handle origin properly
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  
+  if (allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+  }
+  
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-razorpay-signature');
+  
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(200);
+  } else {
+    next();
+  }
+});
+
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
@@ -142,6 +157,91 @@ app.post('/api/verify-payment', async (req, res) => {
       success: false,
       message: 'Payment verification failed',
       error: error.message
+    });
+  }
+});
+
+// Required routes as specified by user
+app.post('/api/payment', async (req, res) => {
+  try {
+    const { amount, currency = 'INR', customer, order } = req.body;
+    
+    // Validate required fields
+    if (!amount) {
+      return res.status(400).json({
+        success: false,
+        message: 'Amount is required'
+      });
+    }
+
+    // Check if Razorpay credentials are configured
+    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+      console.error('Razorpay credentials not configured');
+      return res.status(500).json({ 
+        success: false, 
+        message: 'Payment gateway not configured'
+      });
+    }
+
+    const razorpay = getRazorpayInstance();
+    
+    // Create Razorpay order
+    const razorpayOrder = await razorpay.orders.create({
+      amount: amount * 100, // amount in paise
+      currency: currency,
+      receipt: `order_${Date.now()}`
+    });
+    
+    res.json({
+      success: true,
+      order_id: razorpayOrder.id,
+      amount: razorpayOrder.amount,
+      currency: razorpayOrder.currency,
+      key_id: process.env.RAZORPAY_KEY_ID // Add this to check which key is being used
+    });
+  } catch (error) {
+    console.error('Payment creation error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create payment'
+    });
+  }
+});
+
+app.post('/api/payment/verify', async (req, res) => {
+  try {
+    const { razorpay_payment_id, razorpay_order_id, razorpay_signature } = req.body;
+    
+    // Validate required fields
+    if (!razorpay_payment_id || !razorpay_order_id || !razorpay_signature) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required payment verification parameters'
+      });
+    }
+    
+    // Verify payment signature
+    const generated_signature = crypto
+      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+      .update(razorpay_order_id + '|' + razorpay_payment_id)
+      .digest('hex');
+    
+    if (generated_signature === razorpay_signature) {
+      res.json({
+        success: true,
+        message: 'Payment verified successfully'
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        message: 'Payment verification failed'
+      });
+    }
+  } catch (error) {
+    console.error('Payment verification error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Payment verification failed'
     });
   }
 });

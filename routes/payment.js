@@ -15,7 +15,105 @@ function getRazorpayInstance() {
   });
 }
 
-// Create order endpoint
+// POST /api/payment - Create payment intent
+router.post('/', async (req, res) => {
+  try {
+    const { amount, currency = 'INR', customer, order } = req.body;
+
+    // Validate required fields
+    if (!amount) {
+      return res.status(400).json({
+        success: false,
+        message: 'Amount is required'
+      });
+    }
+
+    // Initialize Razorpay instance
+    const razorpay = getRazorpayInstance();
+
+    // Create order options
+    const options = {
+      amount: amount * 100, // Convert to paise (smallest currency unit)
+      currency,
+      receipt: `order_${Date.now()}`,
+      notes: {
+        customer: customer || 'Anonymous',
+        order: order || 'Default order'
+      }
+    };
+
+    // Create order with Razorpay
+    const razorpayOrder = await razorpay.orders.create(options);
+
+    console.log('Order created:', razorpayOrder.id);
+
+    res.json({
+      success: true,
+      order_id: razorpayOrder.id,
+      amount: razorpayOrder.amount,
+      currency: razorpayOrder.currency,
+      key_id: process.env.RAZORPAY_KEY_ID // Add this to check which key is being used
+    });
+
+  } catch (error) {
+    console.error('Payment creation error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create payment'
+    });
+  }
+});
+
+// POST /api/payment/verify - Verify payment
+router.post('/verify', async (req, res) => {
+  try {
+    const { 
+      razorpay_payment_id, 
+      razorpay_order_id, 
+      razorpay_signature 
+    } = req.body;
+
+    // Validate required fields
+    if (!razorpay_payment_id || !razorpay_order_id || !razorpay_signature) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required payment verification parameters'
+      });
+    }
+
+    // Verify payment signature
+    const generated_signature = crypto
+      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+      .update(razorpay_order_id + '|' + razorpay_payment_id)
+      .digest('hex');
+
+    if (generated_signature === razorpay_signature) {
+      console.log('Payment verified successfully:', razorpay_payment_id);
+      
+      res.json({
+        success: true,
+        message: 'Payment verified successfully'
+      });
+    } else {
+      console.log('Payment verification failed:', razorpay_payment_id);
+      
+      res.status(400).json({
+        success: false,
+        message: 'Payment verification failed'
+      });
+    }
+
+  } catch (error) {
+    console.error('Payment verification error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Payment verification failed'
+    });
+  }
+});
+
+// Keep existing routes for backward compatibility
+// Create order endpoint (legacy)
 router.post('/create-order', async (req, res) => {
   try {
     const { amount, currency = 'INR', receipt, notes } = req.body;
@@ -67,7 +165,7 @@ router.post('/create-order', async (req, res) => {
   }
 });
 
-// Verify payment endpoint
+// Verify payment endpoint (legacy)
 router.post('/verify-payment', async (req, res) => {
   try {
     const { 
