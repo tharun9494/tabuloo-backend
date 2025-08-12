@@ -11,8 +11,69 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const paymentRoutes = require('./routes/payment');
 
+// Twilio SMS service for local development
+class TwilioSMSService {
+  constructor() {
+    this.accountSid = process.env.TWILIO_ACCOUNT_SID;
+    this.authToken = process.env.TWILIO_AUTH_TOKEN;
+    this.phoneNumber = process.env.TWILIO_PHONE_NUMBER;
+    
+    if (!this.accountSid || !this.authToken || !this.phoneNumber) {
+      console.warn('⚠️ Twilio credentials not configured. SMS will be mocked.');
+      this.client = null;
+    } else {
+      const twilio = require('twilio');
+      this.client = twilio(this.accountSid, this.authToken);
+      console.log(`📱 Twilio initialized with phone number: ${this.phoneNumber}`);
+    }
+  }
+
+  async sendOTP(phone, otp) {
+    if (!this.client) {
+      console.log(`📱 [MOCK SMS] Sending OTP ${otp} to ${phone}`);
+      console.log(`📱 [MOCK SMS] Message: "Your OTP is: ${otp}. Valid for 5 minutes."`);
+      return true;
+    }
+
+    try {
+      console.log(`📱 Attempting to send SMS to ${phone} from ${this.phoneNumber}`);
+      
+      const message = await this.client.messages.create({
+        body: `Your OTP is: ${otp}. Valid for 5 minutes. Do not share this code with anyone.`,
+        from: this.phoneNumber,
+        to: phone
+      });
+
+      console.log(`✅ SMS sent successfully!`);
+      console.log(`📱 Message SID: ${message.sid}`);
+      console.log(`📱 Status: ${message.status}`);
+      console.log(`📱 To: ${message.to}`);
+      console.log(`📱 From: ${message.from}`);
+      
+      return true;
+    } catch (error) {
+      console.error(`❌ Failed to send SMS to ${phone}:`);
+      console.error(`❌ Error Code: ${error.code}`);
+      console.error(`❌ Error Message: ${error.message}`);
+      
+      // Common Twilio error codes
+      if (error.code === 21211) {
+        console.error(`❌ TRIAL ACCOUNT: Phone number ${phone} is not verified. Please verify it in Twilio Console.`);
+      } else if (error.code === 21408) {
+        console.error(`❌ TRIAL ACCOUNT: Cannot send to this number. Please verify the number or upgrade your account.`);
+      } else if (error.code === 21614) {
+        console.error(`❌ Invalid phone number format: ${phone}`);
+      }
+      
+      return false;
+    }
+  }
+}
+
+const smsService = new TwilioSMSService();
+
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 
 // CORS configuration
 const allowedOrigins = [
@@ -51,7 +112,7 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 // Routes
-app.use('/api/payment', paymentRoutes);
+// app.use('/api/payment', paymentRoutes);
 
 // Direct routes to match frontend calls
 app.post('/api/create-order', async (req, res) => {
@@ -259,6 +320,227 @@ app.post('/api/payment/verify', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Payment verification failed'
+    });
+  }
+});
+
+// OTP Routes
+app.post('/api/otp/send', async (req, res) => {
+  try {
+    const { identifier } = req.body;
+
+    // Validate required fields
+    if (!identifier) {
+      return res.status(400).json({
+        success: false,
+        message: 'Phone number is required'
+      });
+    }
+
+    // Validate phone number format
+    const phoneRegex = /^[+]?[0-9]{10,15}$/;
+    if (!phoneRegex.test(identifier)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid phone number format'
+      });
+    }
+
+    // Check rate limiting
+    global.otpStore = global.otpStore || new Map();
+    const existing = global.otpStore.get(identifier);
+    if (existing && existing.expiresAt > Date.now()) {
+      const timeLeft = Math.ceil((existing.expiresAt - Date.now()) / 1000);
+      if (timeLeft > 240) { // Allow resend only in last 60 seconds
+        return res.status(429).json({
+          success: false,
+          message: `Please wait ${timeLeft} seconds before requesting new OTP`
+        });
+      }
+    }
+
+    // Generate OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    // Store OTP in memory (use Redis/Database in production)
+    global.otpStore.set(identifier, {
+      otp,
+      expiresAt: Date.now() + 5 * 60 * 1000, // 5 minutes
+      attempts: 0,
+      created: Date.now()
+    });
+
+    // Send OTP using SMS service
+    const sent = await smsService.sendOTP(identifier, otp);
+
+    console.log(`📱 Generated OTP ${otp} for ${identifier}`);
+
+    res.json({
+      success: true,
+      message: 'OTP sent successfully to phone number',
+      expiresIn: 300,
+      // Include OTP for testing (remove in production)
+      otp
+    });
+
+  } catch (error) {
+    console.error('Send OTP error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to send OTP'
+    });
+  }
+});
+
+app.post('/api/otp/verify', async (req, res) => {
+  try {
+    const { identifier, otp } = req.body;
+
+    if (!identifier || !otp) {
+      return res.status(400).json({
+        success: false,
+        message: 'Phone number/email and OTP are required'
+      });
+    }
+
+    // Validate OTP format
+    if (!/^\d{6}$/.test(otp)) {
+      return res.status(400).json({
+        success: false,
+        message: 'OTP must be 6 digits'
+      });
+    }
+
+    // Get stored OTP
+    global.otpStore = global.otpStore || new Map();
+    const stored = global.otpStore.get(identifier);
+
+    if (!stored) {
+      return res.status(400).json({
+        success: false,
+        message: 'OTP not found or expired'
+      });
+    }
+
+    if (stored.expiresAt < Date.now()) {
+      global.otpStore.delete(identifier);
+      return res.status(400).json({
+        success: false,
+        message: 'OTP has expired'
+      });
+    }
+
+    if (stored.attempts >= 3) {
+      global.otpStore.delete(identifier);
+      return res.status(400).json({
+        success: false,
+        message: 'Maximum attempts exceeded'
+      });
+    }
+
+    stored.attempts++;
+
+    if (stored.otp === otp) {
+      global.otpStore.delete(identifier);
+      
+      // Generate session token
+      const crypto = require('crypto');
+      const sessionToken = Buffer.from(JSON.stringify({
+        identifier,
+        verified: true,
+        timestamp: Date.now(),
+        sessionId: crypto.randomBytes(16).toString('hex')
+      })).toString('base64');
+
+      console.log(`✅ OTP verified successfully for ${identifier}`);
+
+      res.json({
+        success: true,
+        message: 'OTP verified successfully',
+        sessionToken,
+        verified: true,
+        identifier: identifier
+      });
+    } else {
+      console.log(`❌ Invalid OTP for ${identifier}`);
+      res.status(400).json({
+        success: false,
+        message: 'Invalid OTP'
+      });
+    }
+
+  } catch (error) {
+    console.error('Verify OTP error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to verify OTP'
+    });
+  }
+});
+
+app.post('/api/otp/validate-session', async (req, res) => {
+  try {
+    const { sessionToken } = req.body;
+    const authHeader = req.headers.authorization;
+
+    const token = sessionToken || (authHeader && authHeader.startsWith('Bearer ') 
+      ? authHeader.substring(7) 
+      : null);
+
+    if (!token) {
+      return res.status(400).json({
+        success: false,
+        message: 'Session token is required'
+      });
+    }
+
+    try {
+      const payload = JSON.parse(Buffer.from(token, 'base64').toString());
+      
+      // Check if token is not too old (24 hours)
+      const maxAge = 24 * 60 * 60 * 1000;
+      if (Date.now() - payload.timestamp > maxAge) {
+        return res.status(401).json({
+          success: false,
+          message: 'Session expired'
+        });
+      }
+
+      // Verify required fields
+      if (!payload.identifier || !payload.verified || !payload.timestamp) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid session token format'
+        });
+      }
+
+      console.log(`✅ Session validated for ${payload.identifier}`);
+
+      res.json({
+        success: true,
+        message: 'Session is valid',
+        valid: true,
+        data: {
+          identifier: payload.identifier,
+          verified: payload.verified,
+          timestamp: payload.timestamp,
+          sessionId: payload.sessionId
+        }
+      });
+
+    } catch (parseError) {
+      console.log(`❌ Invalid session token`);
+      res.status(401).json({
+        success: false,
+        message: 'Invalid session token'
+      });
+    }
+
+  } catch (error) {
+    console.error('Validate session error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to validate session'
     });
   }
 });

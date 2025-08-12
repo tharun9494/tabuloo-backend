@@ -43,6 +43,59 @@ async function testVerifyPayment(orderId) {
   }
 }
 
+// Test OTP sending
+async function testSendOTP() {
+  try {
+    console.log('Testing POST /api/otp/send...');
+    
+    const response = await axios.post(`${BASE_URL}/api/otp/send`, {
+      identifier: '+918309547073'
+    });
+    
+    console.log('✅ OTP send successful:', response.data);
+    return {
+      identifier: '+918309547073',
+      otp: response.data.otp // OTP is returned for testing
+    };
+  } catch (error) {
+    console.error('❌ OTP send failed:', error.response?.data || error.message);
+    return null;
+  }
+}
+
+// Test OTP verification
+async function testVerifyOTP(identifier, otp) {
+  try {
+    console.log('Testing POST /api/otp/verify...');
+    
+    const response = await axios.post(`${BASE_URL}/api/otp/verify`, {
+      identifier: identifier,
+      otp: otp
+    });
+    
+    console.log('✅ OTP verification successful:', response.data);
+    return response.data.sessionToken;
+  } catch (error) {
+    console.error('❌ OTP verification failed:', error.response?.data || error.message);
+    return null;
+  }
+}
+
+// Test session validation
+async function testValidateSession(sessionToken) {
+  try {
+    console.log('Testing POST /api/otp/validate-session...');
+    
+    const response = await axios.post(`${BASE_URL}/api/otp/validate-session`, {
+      sessionToken: sessionToken
+    });
+    
+    console.log('✅ Session validation successful:', response.data);
+  } catch (error) {
+    console.error('❌ Session validation failed:', error.response?.data || error.message);
+  }
+}
+
 // Test health check
 async function testHealthCheck() {
   try {
@@ -58,19 +111,45 @@ async function testHealthCheck() {
 
 // Run all tests
 async function runTests() {
-  console.log('🚀 Starting route tests...\n');
+  console.log('🚀 Starting comprehensive API tests...\n');
   
+  // Health Check
   await testHealthCheck();
   console.log('');
   
+  // Payment Tests
   const orderId = await testCreatePayment();
   console.log('');
   
   if (orderId) {
     await testVerifyPayment(orderId);
+    console.log('');
   }
   
-  console.log('\n✨ Tests completed!');
+  // OTP Tests
+  const otpData = await testSendOTP();
+  console.log('');
+  
+  if (otpData) {
+    const sessionToken = await testVerifyOTP(otpData.identifier, otpData.otp);
+    console.log('');
+    
+    if (sessionToken) {
+      await testValidateSession(sessionToken);
+    }
+  }
+  
+  console.log('\n✨ All tests completed!');
+  console.log('\n📝 Available API Endpoints:');
+  console.log('Payment APIs:');
+  console.log('• POST /api/payment - Create payment order');
+  console.log('• POST /api/payment/verify - Verify payment');
+  console.log('\nOTP APIs:');
+  console.log('• POST /api/otp/send - Send OTP to phone');
+  console.log('• POST /api/otp/verify - Verify OTP');
+  console.log('• POST /api/otp/validate-session - Validate session');
+  console.log('\nHealth Check:');
+  console.log('• GET /health - Server health status');
 }
 
 // Run tests if this file is executed directly
@@ -81,6 +160,9 @@ if (require.main === module) {
 module.exports = {
   testCreatePayment,
   testVerifyPayment,
+  testSendOTP,
+  testVerifyOTP,
+  testValidateSession,
   testHealthCheck,
   runTests
-}; 
+};

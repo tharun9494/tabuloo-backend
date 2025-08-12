@@ -15,7 +15,8 @@
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.19.2",
-    "razorpay": "^2.9.6"
+    "razorpay": "^2.9.6",
+    "twilio": "^4.19.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.3"
