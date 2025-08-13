@@ -10,6 +10,7 @@ const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const paymentRoutes = require('./routes/payment');
+const authRoutes = require('./routes/auth');
 
 // Twilio SMS service for local development
 class TwilioSMSService {
@@ -113,6 +114,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 // Routes
 // app.use('/api/payment', paymentRoutes);
+app.use('/api/auth', authRoutes);
 
 // Direct routes to match frontend calls
 app.post('/api/create-order', async (req, res) => {
