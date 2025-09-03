@@ -19,13 +19,24 @@ class TwilioSMSService {
     this.authToken = process.env.TWILIO_AUTH_TOKEN;
     this.phoneNumber = process.env.TWILIO_PHONE_NUMBER;
     
-    if (!this.accountSid || !this.authToken || !this.phoneNumber) {
-      console.warn('⚠️ Twilio credentials not configured. SMS will be mocked.');
+    // Check if all required Twilio credentials are provided and valid
+    if (!this.accountSid || !this.authToken || !this.phoneNumber || 
+        !this.accountSid.startsWith('AC') || this.accountSid.length < 34) {
+      console.warn('⚠️ Twilio credentials not configured or invalid. SMS will be mocked.');
+      console.warn('⚠️ To enable SMS, configure the following environment variables:');
+      console.warn('   - TWILIO_ACCOUNT_SID (should start with "AC")');
+      console.warn('   - TWILIO_AUTH_TOKEN');
+      console.warn('   - TWILIO_PHONE_NUMBER');
       this.client = null;
     } else {
-      const twilio = require('twilio');
-      this.client = twilio(this.accountSid, this.authToken);
-      console.log(`📱 Twilio initialized with phone number: ${this.phoneNumber}`);
+      try {
+        const twilio = require('twilio');
+        this.client = twilio(this.accountSid, this.authToken);
+        console.log(`📱 Twilio initialized with phone number: ${this.phoneNumber}`);
+      } catch (error) {
+        console.error('❌ Failed to initialize Twilio:', error.message);
+        this.client = null;
+      }
     }
   }
 
@@ -115,6 +126,74 @@ app.use(bodyParser.urlencoded({ extended: true }));
 // Routes
 // app.use('/api/payment', paymentRoutes);
 app.use('/api/auth', authRoutes);
+
+// Email API route
+app.post('/api/send-email', async (req, res) => {
+  try {
+    const { to, subject, html } = req.body || {};
+    
+    if (!to || !subject || !html) {
+      return res.status(400).json({ ok: false, error: 'Missing required fields' });
+    }
+
+    // Check if SMTP environment variables are configured
+    if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
+      console.error('SMTP environment variables not configured');
+      return res.status(500).json({ 
+        ok: false, 
+        error: 'Email service not configured. Please contact administrator.',
+        details: 'SMTP environment variables are missing'
+      });
+    }
+
+    const nodemailer = require('nodemailer');
+
+    const transporter = nodemailer.createTransporter({
+      host: process.env.SMTP_HOST,
+      port: Number(process.env.SMTP_PORT || 587),
+      secure: String(process.env.SMTP_SECURE || 'false') === 'true',
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
+
+    const fromAddress = process.env.FROM_EMAIL || process.env.SMTP_USER || 'no-reply@tabuloo.app';
+
+    await transporter.sendMail({
+      from: `Tabuloo <${fromAddress}>`,
+      to,
+      subject,
+      html,
+    });
+
+    console.log('Email sent successfully to:', to);
+    return res.status(200).json({ ok: true, message: 'Email sent successfully' });
+    
+  } catch (error) {
+    console.error('Email send failed:', error);
+    
+    // Provide more specific error messages
+    let errorMessage = 'Failed to send email';
+    if (error instanceof Error) {
+      if (error.message.includes('Invalid login')) {
+        errorMessage = 'Email authentication failed. Please check SMTP credentials.';
+      } else if (error.message.includes('ECONNREFUSED')) {
+        errorMessage = 'Cannot connect to email server. Please check SMTP configuration.';
+      } else if (error.message.includes('ENOTFOUND')) {
+        errorMessage = 'Email server not found. Please check SMTP host configuration.';
+      } else {
+        errorMessage = error.message;
+      }
+    }
+    
+    return res.status(500).json({ 
+      ok: false, 
+      error: errorMessage,
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
 
 // Direct routes to match frontend calls
 app.post('/api/create-order', async (req, res) => {
@@ -549,7 +628,58 @@ app.post('/api/otp/validate-session', async (req, res) => {
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-  res.json({ status: 'OK', message: 'Razorpay backend is running' });
+  const uptime = process.uptime();
+  const memoryUsage = process.memoryUsage();
+  
+  // Check service configurations
+  const serviceStatus = {
+    razorpay: !!(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET),
+    twilio: !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_PHONE_NUMBER),
+    smtp: !!(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS),
+    firebase: !!(process.env.FIREBASE_PROJECT_ID || process.env.GOOGLE_APPLICATION_CREDENTIALS)
+  };
+
+  const response = {
+    status: 'OK',
+    message: 'Tabuloo backend is running',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
+    uptime: {
+      seconds: Math.floor(uptime),
+      formatted: `${Math.floor(uptime / 3600)}h ${Math.floor((uptime % 3600) / 60)}m ${Math.floor(uptime % 60)}s`
+    },
+    memory: {
+      used: `${Math.round(memoryUsage.heapUsed / 1024 / 1024)} MB`,
+      total: `${Math.round(memoryUsage.heapTotal / 1024 / 1024)} MB`,
+      external: `${Math.round(memoryUsage.external / 1024 / 1024)} MB`
+    },
+    services: serviceStatus,
+    version: process.version,
+    platform: process.platform,
+    port: PORT,
+    pid: process.pid
+  };
+
+  // Overall health status based on critical services
+  const criticalServices = ['razorpay'];
+  const healthyServices = criticalServices.every(service => serviceStatus[service]);
+  
+  if (!healthyServices) {
+    response.status = 'DEGRADED';
+    response.warnings = [];
+    
+    if (!serviceStatus.razorpay) {
+      response.warnings.push('Razorpay payment gateway not configured');
+    }
+    if (!serviceStatus.twilio) {
+      response.warnings.push('Twilio SMS service not configured (SMS will be mocked)');
+    }
+    if (!serviceStatus.smtp) {
+      response.warnings.push('SMTP email service not configured');
+    }
+  }
+
+  res.json(response);
 });
 
 // Error handling middleware
@@ -562,8 +692,8 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Handle 404
-app.use('*', (req, res) => {
+// Handle 404 - catch all unmatched routes
+app.use((req, res) => {
   res.status(404).json({
     success: false,
     message: 'Route not found'

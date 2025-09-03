@@ -1,3 +1,108 @@
-node_modules
-.env
+# ===== DEPENDENCIES =====
+node_modules/
+jspm_packages/
+
+# ===== ENVIRONMENT VARIABLES =====
+.env*
+!.env.example
+
+# ===== BUILD OUTPUTS =====
+dist/
+build/
+out/
+coverage/
+
+# ===== DEVELOPMENT TOOLS =====
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ===== LOGS =====
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# ===== TESTING =====
+coverage/
+.nyc_output/
+.coverage/
+*.lcov
+test-results/
+playwright-report/
+
+# ===== PACKAGE MANAGERS =====
+.npm
+.yarn/
+.pnp.*
+yarn-integrity
+package-lock.json.backup
+
+# ===== TEMPORARY FILES =====
+*.tmp
+*.temp
+.tmp/
+.temp/
+upload/
+uploads/
+
+# ===== OS GENERATED FILES =====
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ===== DEPLOYMENT =====
 .vercel
+.netlify
+.bolt/
+
+# ===== DATABASE =====
+*.db
+*.sqlite
+*.sqlite3
+db/
+database/
+
+# ===== SECURITY & CREDENTIALS =====
+*.pem
+*.p12
+*.key
+*.crt
+credentials/
+secrets/
+service-account-key.json
+
+# ===== API KEYS & CONFIGS =====
+config/local.json
+config/development.json
+config/test.json
+
+# ===== CACHE =====
+.cache/
+.parcel-cache/
+.eslintcache
+
+# ===== TYPESCRIPT =====
+*.tsbuildinfo
+
+# ===== EXPRESS/NODE SPECIFIC =====
+sessions/
+public/uploads/
+
+# ===== FIREBASE =====
+.firebase/
+firebase-debug.log*
+firebase-debug.*.log*
+
+# ===== MISC =====
+.dataconnect

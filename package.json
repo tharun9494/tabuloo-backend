@@ -1,26 +1,31 @@
 {
-  "name": "razorpay-backend",
+  "name": "tabuloo-backend",
   "version": "1.0.0",
-  "description": "Express backend for Razorpay payment integration",
+  "description": "Express backend for Tabuloo - Payment integration, Email services, and APIs",
   "main": "index.js",
   "private": true,
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
+    "email-server": "node email-api/server.js",
+    "email-dev": "nodemon email-api/server.js",
+    "test-email": "node email-api/test-email.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
+    "@vercel/node": "^5.3.19",
     "axios": "^1.11.0",
-    "body-parser": "^1.20.3",
+    "body-parser": "^2.2.0",
     "cors": "^2.8.5",
-    "dotenv": "^16.3.1",
-    "express": "^4.19.2",
-    "firebase": "^12.1.0",
-    "firebase-admin": "^13.4.0",
+    "dotenv": "^17.2.2",
+    "express": "^5.1.0",
+    "firebase": "^12.2.1",
+    "firebase-admin": "^13.5.0",
+    "nodemailer": "^7.0.6",
     "razorpay": "^2.9.6",
-    "twilio": "^4.19.0"
+    "twilio": "^5.8.2"
   },
   "devDependencies": {
-    "nodemon": "^3.0.3"
+    "nodemon": "^3.1.10"
   }
 }

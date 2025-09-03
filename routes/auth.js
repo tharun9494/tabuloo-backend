@@ -1,11 +1,32 @@
 const express = require('express');
 const router = express.Router();
-const admin = require('firebase-admin');
-const { auth } = require('../config/firebase');
-const { GoogleAuthProvider, signInWithCredential } = require('firebase/auth');
-const { verifyFirebaseToken } = require('../middleware/auth');
+const { auth, isFirebaseConfigured } = require('../config/firebase');
 
-router.post('/google/signin', async (req, res) => {
+// Middleware to check if Firebase is configured
+const requireFirebase = (req, res, next) => {
+    if (!isFirebaseConfigured()) {
+        return res.status(503).json({
+            error: 'Firebase authentication not configured',
+            message: 'Firebase environment variables are not set. Authentication features are disabled.',
+            details: 'Please configure Firebase environment variables to enable authentication.'
+        });
+    }
+    next();
+};
+
+// Load Firebase dependencies only if configured
+let admin, GoogleAuthProvider, signInWithCredential, verifyFirebaseToken;
+
+if (isFirebaseConfigured()) {
+    admin = require('firebase-admin');
+    const firebaseAuth = require('firebase/auth');
+    GoogleAuthProvider = firebaseAuth.GoogleAuthProvider;
+    signInWithCredential = firebaseAuth.signInWithCredential;
+    const authMiddleware = require('../middleware/auth');
+    verifyFirebaseToken = authMiddleware.verifyFirebaseToken;
+}
+
+router.post('/google/signin', requireFirebase, async (req, res) => {
     try {
         const { idToken } = req.body;
         if (!idToken) {
@@ -82,16 +103,24 @@ router.post('/google/signin', async (req, res) => {
 });
 
 // Protected route example - requires valid Firebase token
-router.get('/verify', verifyFirebaseToken, (req, res) => {
-    res.json({
-        success: true,
-        message: 'Token is valid',
-        user: req.user
-    });
+router.get('/verify', requireFirebase, (req, res, next) => {
+    if (verifyFirebaseToken) {
+        verifyFirebaseToken(req, res, () => {
+            res.json({
+                success: true,
+                message: 'Token is valid',
+                user: req.user
+            });
+        });
+    } else {
+        res.status(503).json({
+            error: 'Firebase verification not available'
+        });
+    }
 });
 
 // Test endpoint to get a token directly (DO NOT USE IN PRODUCTION)
-router.post('/test-token', async (req, res) => {
+router.post('/test-token', requireFirebase, async (req, res) => {
     try {
         const { email, password } = req.body;
         
@@ -118,6 +147,16 @@ router.post('/test-token', async (req, res) => {
             details: error.message
         });
     }
+});
+
+// Health check for auth service
+router.get('/health', (req, res) => {
+    res.json({
+        success: true,
+        message: 'Auth service is running',
+        firebaseConfigured: isFirebaseConfigured(),
+        timestamp: new Date().toISOString()
+    });
 });
 
 module.exports = router;
