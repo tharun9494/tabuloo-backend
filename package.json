@@ -13,7 +13,7 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
-    "@vercel/node": "^5.3.19",
+    "@vercel/node": "^2.3.0",
     "axios": "^1.11.0",
     "body-parser": "^2.2.0",
     "cors": "^2.8.5",
@@ -21,6 +21,7 @@
     "express": "^5.1.0",
     "firebase": "^12.2.1",
     "firebase-admin": "^13.5.0",
+    "node-fetch": "^3.3.2",
     "nodemailer": "^7.0.6",
     "razorpay": "^2.9.6",
     "twilio": "^5.8.2"

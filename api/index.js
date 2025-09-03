@@ -271,6 +271,16 @@ app.get('/api/delay-test', async (req, res) => {
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'OK', 
+    message: 'Tabuloo API is running',
+    timestamp: new Date().toISOString(),
+    version: '1.0.0'
+  });
+});
+
+// Health check endpoint
+app.get('/health', (req, res) => {
   res.json({ status: 'OK', message: 'Razorpay backend is running' });
 });
 
