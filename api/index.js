@@ -29,16 +29,28 @@ const allowedOrigins = [
   'http://localhost:5174', 
   'https://tabuloo-backend-p95l.vercel.app',
   'https://www.tabuloo.com',
-  'https://tabuloo.com'
-  
+  'https://tabuloo.com',
+  'https://www.govupalu.com',
+  'https://govupalu.vercel.app',
+  'https://govupalu.com'
 ];
 
 // Custom CORS middleware to handle origin properly
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   
+  // Clear any existing CORS headers first
+  res.removeHeader('Access-Control-Allow-Origin');
+  res.removeHeader('Access-Control-Allow-Credentials');
+  res.removeHeader('Access-Control-Allow-Methods');
+  res.removeHeader('Access-Control-Allow-Headers');
+  
+  // Set CORS headers
   if (allowedOrigins.includes(origin)) {
     res.header('Access-Control-Allow-Origin', origin);
+  } else {
+    // For requests without origin (like Postman, curl)
+    res.header('Access-Control-Allow-Origin', '*');
   }
   
   res.header('Access-Control-Allow-Credentials', 'true');
@@ -47,9 +59,10 @@ app.use((req, res, next) => {
   
   if (req.method === 'OPTIONS') {
     res.sendStatus(200);
-  } else {
-    next();
+    return;
   }
+  
+  next();
 });
 
 app.use(bodyParser.json());

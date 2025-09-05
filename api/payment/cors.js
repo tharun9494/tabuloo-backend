@@ -9,11 +9,19 @@ const allowedOrigins = [
   'https://govupalu.vercel.app',
   'https://govupalu.com',
   'https://forefight-health-backend.vercel.app/',
-  'https://tabuloo-backend-p95l.vercel.app'
+  'https://tabuloo-backend-p95l.vercel.app',
+  'https://www.tabuloo.com',
+  'https://tabuloo.com'
 ];
 
 export function setCorsHeaders(req, res) {
   const origin = req.headers.origin;
+  
+  // Clear any existing CORS headers first to prevent duplicates
+  res.removeHeader('Access-Control-Allow-Origin');
+  res.removeHeader('Access-Control-Allow-Methods');
+  res.removeHeader('Access-Control-Allow-Headers');
+  res.removeHeader('Access-Control-Allow-Credentials');
   
   // Check if the origin is in our allowed list
   if (allowedOrigins.includes(origin)) {
@@ -30,8 +38,8 @@ export function setCorsHeaders(req, res) {
       console.log('✅ Allowed localhost origin:', origin);
     } else {
       // Set the main domain as fallback
-      res.setHeader('Access-Control-Allow-Origin', 'https://www.govupalu.com');
-      console.log('🔄 Using fallback origin: https://www.govupalu.com');
+      res.setHeader('Access-Control-Allow-Origin', 'https://www.tabuloo.com');
+      console.log('🔄 Using fallback origin: https://www.tabuloo.com');
     }
   }
   

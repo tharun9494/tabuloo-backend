@@ -1,78 +1,50 @@
+// Test CORS fix
 const axios = require('axios');
 
 const BASE_URL = 'https://tabuloo-backend-p95l.vercel.app';
 
-// Test CORS preflight request
-async function testCORS() {
+async function testCorsFix() {
+  console.log('🧪 Testing CORS Fix\n');
+  
   try {
-    console.log('Testing CORS preflight request...');
-    
-    // Test OPTIONS request (preflight)
+    // Test OPTIONS preflight request
+    console.log('📊 Testing OPTIONS preflight request...');
     const optionsResponse = await axios.options(`${BASE_URL}/api/payment`, {
       headers: {
-        'Origin': 'http://localhost:5173',
+        'Origin': 'https://www.tabuloo.com',
         'Access-Control-Request-Method': 'POST',
         'Access-Control-Request-Headers': 'Content-Type'
       }
     });
     
-    console.log('✅ CORS preflight successful');
-    console.log('Response headers:', optionsResponse.headers);
+    console.log('✅ OPTIONS response status:', optionsResponse.status);
+    console.log('📊 CORS headers:');
+    console.log('   Access-Control-Allow-Origin:', optionsResponse.headers['access-control-allow-origin']);
+    console.log('   Access-Control-Allow-Methods:', optionsResponse.headers['access-control-allow-methods']);
+    console.log('   Access-Control-Allow-Headers:', optionsResponse.headers['access-control-allow-headers']);
     
     // Test actual POST request
-    console.log('\nTesting POST request...');
+    console.log('\n📊 Testing POST request...');
     const postResponse = await axios.post(`${BASE_URL}/api/payment`, {
-      amount: 1000,
-      currency: 'INR',
-      customer: 'test-customer',
-      order: 'test-order-123'
+      amount: 70,
+      currency: 'INR'
     }, {
       headers: {
-        'Content-Type': 'application/json',
-        'Origin': 'http://localhost:5173'
+        'Origin': 'https://www.tabuloo.com',
+        'Content-Type': 'application/json'
       }
     });
     
-    console.log('✅ POST request successful:', postResponse.data);
+    console.log('✅ POST response status:', postResponse.status);
+    console.log('📊 Response data:', postResponse.data);
     
   } catch (error) {
-    console.error('❌ CORS test failed:', error.response?.data || error.message);
+    console.error('❌ Test failed:', error.response?.data || error.message);
     if (error.response?.headers) {
-      console.log('Response headers:', error.response.headers);
+      console.log('📊 Response headers:', error.response.headers);
     }
   }
 }
 
-// Test health endpoint
-async function testHealth() {
-  try {
-    console.log('\nTesting health endpoint...');
-    
-    const response = await axios.get(`${BASE_URL}/api/health`);
-    
-    console.log('✅ Health check successful:', response.data);
-  } catch (error) {
-    console.error('❌ Health check failed:', error.response?.data || error.message);
-  }
-}
-
-// Run tests
-async function runCORSTests() {
-  console.log('🚀 Starting CORS tests...\n');
-  
-  await testHealth();
-  await testCORS();
-  
-  console.log('\n✨ CORS tests completed!');
-}
-
-// Run tests if this file is executed directly
-if (require.main === module) {
-  runCORSTests().catch(console.error);
-}
-
-module.exports = {
-  testCORS,
-  testHealth,
-  runCORSTests
-}; 
+// Run the test
+testCorsFix();
