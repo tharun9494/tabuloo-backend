@@ -95,13 +95,29 @@ app.use((req, res, next) => {
 
 // CORS configuration using cors package
 const corsOptions = {
-  origin: [
-    'http://localhost:5173',
-    'https://tabuloo.com'
-  ],
+  origin: (origin, callback) => {
+    try {
+      if (!origin) return callback(null, true);
+      const allowedOrigins = [
+        'http://localhost:5173',
+        'http://localhost:3000',
+        'http://localhost:3001',
+        'http://localhost:5174',
+        'https://tabuloo.com',
+        'https://www.tabuloo.com'
+      ];
+      const hostname = new URL(origin).hostname;
+      if (allowedOrigins.includes(origin) || /\.vercel\.app$/.test(hostname)) {
+        return callback(null, true);
+      }
+    } catch (_) {}
+    callback(null, false);
+  },
   credentials: true
 };
 app.use(cors(corsOptions));
+// Handle preflight for all routes (Express 5-safe regex path)
+app.options(/.*/, cors(corsOptions));
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
