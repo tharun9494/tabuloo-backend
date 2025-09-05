@@ -33,25 +33,12 @@ function normalizeAmountToPaise(inputAmount) {
 
 // CORS configuration using cors package
 const corsOptions = {
-  origin: (origin, callback) => {
-    try {
-      if (!origin) return callback(null, true); // non-browser
-      const allowedOrigins = [
-        'http://localhost:5173',
-        'http://localhost:3000',
-        'http://localhost:3001',
-        'http://localhost:5174',
-        'https://tabuloo.com',
-        'https://www.tabuloo.com'
-      ];
-      const hostname = new URL(origin).hostname;
-      if (allowedOrigins.includes(origin) || /\.vercel\.app$/.test(hostname)) {
-        return callback(null, true);
-      }
-    } catch (_) {}
-    callback(null, false);
-  },
-  credentials: true
+  origin: true, // echo request Origin
+  credentials: true,
+  methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
+  allowedHeaders: ['Origin','X-Requested-With','Content-Type','Accept','Authorization','x-razorpay-signature'],
+  optionsSuccessStatus: 204,
+  preflightContinue: false
 };
 app.use(cors(corsOptions));
 // Handle preflight for all routes (Express 5-safe regex path)
