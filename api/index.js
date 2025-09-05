@@ -1,5 +1,6 @@
 const express = require('express');
 const bodyParser = require('body-parser');
+const cors = require('cors');
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
 
@@ -20,29 +21,15 @@ function getRazorpayInstance() {
   });
 }
 
-// CORS configuration - always return CORS headers
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-
-  if (origin) {
-    // Echo back the exact Origin for browser requests
-    res.setHeader("Access-Control-Allow-Origin", origin);
-    res.setHeader("Vary", "Origin");
-  } else {
-    // Non-browser clients (no Origin header)
-    res.setHeader("Access-Control-Allow-Origin", "*");
-  }
-
-  res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization, x-razorpay-signature");
-  res.setHeader("Access-Control-Allow-Credentials", "true");
-
-  if (req.method === 'OPTIONS') {
-    return res.status(204).end();
-  }
-
-  next();
-});
+// CORS configuration using cors package
+const corsOptions = {
+  origin: [
+    'http://localhost:5173',
+    'https://tabuloo.com'
+  ],
+  credentials: true
+};
+app.use(cors(corsOptions));
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -65,7 +52,7 @@ app.post('/api/create-order', async (req, res) => {
 
     // Create order options
     const options = {
-      amount: amount, // Use amount directly (no paise conversion)
+      amount: Math.round(Number(amount) * 100), // convert INR to paise
       currency,
       receipt: receipt || `receipt_${Date.now()}`,
       notes: notes || {}
@@ -177,7 +164,7 @@ app.post('/api/payment', async (req, res) => {
     
     // Create Razorpay order
     const razorpayOrder = await razorpay.orders.create({
-      amount: amount, // Use amount directly (no paise conversion)
+      amount: Math.round(Number(amount) * 100), // convert INR to paise
       currency: currency,
       receipt: `order_${Date.now()}`
     });
@@ -284,8 +271,8 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Handle 404
-app.use('*', (req, res) => {
+// Handle 404 (catch-all)
+app.use((req, res) => {
   res.status(404).json({
     success: false,
     message: 'Route not found'

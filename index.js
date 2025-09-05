@@ -93,49 +93,15 @@ app.use((req, res, next) => {
   next();
 });
 
-// CORS configuration
-const allowedOrigins = [
-  'http://localhost:3000',
-  'http://localhost:3001', 
-  'http://localhost:5173', 
-  'http://localhost:5174', 
-  'https://tabuloo-backend-p95l.vercel.app',
-  'https://www.tabuloo.com',
-  'https://tabuloo.com',
-  'https://www.govupalu.com',
-  'https://govupalu.vercel.app',
-  'https://govupalu.com'
-];
-
-// Custom CORS middleware to handle origin properly
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  
-  // Clear any existing CORS headers first
-  res.removeHeader('Access-Control-Allow-Origin');
-  res.removeHeader('Access-Control-Allow-Credentials');
-  res.removeHeader('Access-Control-Allow-Methods');
-  res.removeHeader('Access-Control-Allow-Headers');
-  
-  // Set CORS headers
-  if (allowedOrigins.includes(origin)) {
-    res.header('Access-Control-Allow-Origin', origin);
-  } else {
-    // For requests without origin (like Postman, curl)
-    res.header('Access-Control-Allow-Origin', '*');
-  }
-  
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-razorpay-signature');
-  
-  if (req.method === 'OPTIONS') {
-    res.sendStatus(200);
-    return;
-  }
-  
-  next();
-});
+// CORS configuration using cors package
+const corsOptions = {
+  origin: [
+    'http://localhost:5173',
+    'https://tabuloo.com'
+  ],
+  credentials: true
+};
+app.use(cors(corsOptions));
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -266,8 +232,8 @@ app.post('/api/create-order', async (req, res) => {
       key_secret: process.env.RAZORPAY_KEY_SECRET
     });
 
-    // Use amount directly (no paise conversion)
-    const finalAmount = Math.round(numericAmount);
+    // Convert to paise
+    const finalAmount = Math.round(numericAmount * 100);
     
     console.log('📊 Amount conversion:');
     console.log('📊 Original amount:', numericAmount);
@@ -424,8 +390,8 @@ app.post('/api/payment', async (req, res) => {
       key_secret: process.env.RAZORPAY_KEY_SECRET
     });
     
-    // Use amount directly (no paise conversion)
-    const finalAmount = Math.round(numericAmount);
+    // Convert to paise
+    const finalAmount = Math.round(numericAmount * 100);
     
     console.log('📊 Amount conversion (/api/payment):');
     console.log('📊 Original amount:', numericAmount);
