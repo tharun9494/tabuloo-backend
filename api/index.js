@@ -20,43 +20,21 @@ function getRazorpayInstance() {
   });
 }
 
-// CORS configuration
-const allowedOrigins = [
-  "http://localhost:3000",
-  "http://localhost:3001",
-  "http://localhost:5173",
-  "http://localhost:5174",
-  "https://tabuloo.com",
-  "https://www.tabuloo.com",
-  "https://govupalu.com",
-  "https://www.govupalu.com",
-  "https://govupalu.vercel.app"
-];
-
-// Custom CORS middleware to handle origin and preflight properly
+// CORS configuration - always return CORS headers
 app.use((req, res, next) => {
   const origin = req.headers.origin;
 
-  // Determine if origin is allowed (exact match or any *.vercel.app)
-  let isAllowed = false;
-  if (!origin) {
-    isAllowed = true; // non-browser or same-origin requests
-  } else {
-    try {
-      const hostname = new URL(origin).hostname;
-      isAllowed = allowedOrigins.includes(origin) || /\.vercel\.app$/.test(hostname);
-    } catch (_) {
-      isAllowed = false;
-    }
-  }
-
-  if (isAllowed) {
-    res.setHeader("Access-Control-Allow-Origin", origin || "*");
+  if (origin) {
+    // Echo back the exact Origin for browser requests
+    res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Vary", "Origin");
+  } else {
+    // Non-browser clients (no Origin header)
+    res.setHeader("Access-Control-Allow-Origin", "*");
   }
 
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, x-razorpay-signature, X-Requested-With");
+  res.setHeader("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization, x-razorpay-signature");
   res.setHeader("Access-Control-Allow-Credentials", "true");
 
   if (req.method === 'OPTIONS') {
