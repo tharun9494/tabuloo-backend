@@ -1,17 +1,13 @@
 const allowedOrigins = [
-  'http://localhost:3000',
-  'http://localhost:3001',
-  'http://localhost:5173',
-  'http://localhost:5174',
-  'https://forefight-health-backend-tharun9494-tharun9494s-projects.vercel.app',
-  'https://forefight-patient.vercel.app',
-  'https://www.govupalu.com',
-  'https://govupalu.vercel.app',
-  'https://govupalu.com',
-  'https://forefight-health-backend.vercel.app/',
-  'https://tabuloo-backend-p95l.vercel.app',
-  'https://www.tabuloo.com',
-  'https://tabuloo.com'
+  "http://localhost:3000",
+  "http://localhost:3001",
+  "http://localhost:5173",
+  "http://localhost:5174",
+  "https://tabuloo.com",
+  "https://www.tabuloo.com",
+  "https://govupalu.com",
+  "https://www.govupalu.com",
+  "https://govupalu.vercel.app"
 ];
 
 export function setCorsHeaders(req, res) {

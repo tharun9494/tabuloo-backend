@@ -23,61 +23,26 @@ function getRazorpayInstance() {
 
 // CORS configuration for Vercel
 const allowedOrigins = [
-  'http://localhost:3000',
-  'http://localhost:3001', 
-  'http://localhost:5173', 
-  'http://localhost:5174', 
-  'https://tabuloo-backend-p95l.vercel.app',
-  'https://www.tabuloo.com',
-  'https://tabuloo.com',
-  'https://www.govupalu.com',
-  'https://govupalu.vercel.app',
-  'https://govupalu.com'
+  "http://localhost:3000",
+  "http://localhost:3001",
+  "http://localhost:5173",
+  "http://localhost:5174",
+  "https://tabuloo.com",
+  "https://www.tabuloo.com",
+  "https://govupalu.com",
+  "https://www.govupalu.com",
+  "https://govupalu.vercel.app"
 ];
 
 // Custom CORS middleware to handle origin properly
 app.use((req, res, next) => {
   const origin = req.headers.origin;
-  
-  console.log('🔧 CORS Middleware - Origin:', origin);
-  console.log('🔧 CORS Middleware - Method:', req.method);
-  console.log('🔧 CORS Middleware - Path:', req.path);
-  
-  // Set CORS headers - only set if not already set
-  if (!res.getHeader('Access-Control-Allow-Origin')) {
-    if (allowedOrigins.includes(origin)) {
-      res.header('Access-Control-Allow-Origin', origin);
-      console.log('✅ CORS: Allowed origin from list:', origin);
-    } else if (origin && origin.includes('tabuloo.com')) {
-      res.header('Access-Control-Allow-Origin', origin);
-      console.log('✅ CORS: Allowed tabuloo.com origin:', origin);
-    } else {
-      // For requests without origin (like Postman, curl)
-      res.header('Access-Control-Allow-Origin', '*');
-      console.log('✅ CORS: Using wildcard for origin:', origin);
-    }
-  } else {
-    console.log('⚠️ CORS: Origin header already set:', res.getHeader('Access-Control-Allow-Origin'));
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
   }
-  
-  if (!res.getHeader('Access-Control-Allow-Credentials')) {
-    res.header('Access-Control-Allow-Credentials', 'true');
-  }
-  
-  if (!res.getHeader('Access-Control-Allow-Methods')) {
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  }
-  
-  if (!res.getHeader('Access-Control-Allow-Headers')) {
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-razorpay-signature');
-  }
-  
-  if (req.method === 'OPTIONS') {
-    console.log('🔄 CORS: Handling OPTIONS preflight');
-    res.sendStatus(200);
-    return;
-  }
-  
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader("Access-Control-Allow-Credentials", "true");
   next();
 });
 
