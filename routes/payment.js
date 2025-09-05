@@ -33,7 +33,7 @@ router.post('/', async (req, res) => {
 
     // Create order options
     const options = {
-      amount: amount * 100, // Convert to paise (smallest currency unit)
+      amount: amount, // Use amount directly (no paise conversion)
       currency,
       receipt: `order_${Date.now()}`,
       notes: {
@@ -131,7 +131,7 @@ router.post('/create-order', async (req, res) => {
 
     // Create order options
     const options = {
-      amount: amount * 100, // Convert to paise (smallest currency unit)
+      amount: amount, // Use amount directly (no paise conversion)
       currency,
       receipt: receipt || `receipt_${Date.now()}`,
       notes: notes || {}

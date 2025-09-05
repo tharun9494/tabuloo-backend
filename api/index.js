@@ -29,10 +29,8 @@ const allowedOrigins = [
   'http://localhost:5174', 
   'https://tabuloo-backend-p95l.vercel.app',
   'https://www.tabuloo.com',
-  'https://tabuloo.com',
-  'https://www.govupalu.com',
-  'https://govupalu.vercel.app',
-  'https://govupalu.com'
+  'https://tabuloo.com'
+  
 ];
 
 // Custom CORS middleware to handle origin properly
@@ -75,7 +73,7 @@ app.post('/api/create-order', async (req, res) => {
 
     // Create order options
     const options = {
-      amount: amount * 100, // Convert to paise (smallest currency unit)
+      amount: amount, // Use amount directly (no paise conversion)
       currency,
       receipt: receipt || `receipt_${Date.now()}`,
       notes: notes || {}
@@ -187,7 +185,7 @@ app.post('/api/payment', async (req, res) => {
     
     // Create Razorpay order
     const razorpayOrder = await razorpay.orders.create({
-      amount: amount * 100, // amount in paise
+      amount: amount, // Use amount directly (no paise conversion)
       currency: currency,
       receipt: `order_${Date.now()}`
     });

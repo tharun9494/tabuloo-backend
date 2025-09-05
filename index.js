@@ -10,7 +10,6 @@ const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const paymentRoutes = require('./routes/payment');
-const authRoutes = require('./routes/auth');
 
 // Twilio SMS service for local development
 class TwilioSMSService {
@@ -95,10 +94,7 @@ const allowedOrigins = [
   'http://localhost:5174', 
   'https://tabuloo-backend-p95l.vercel.app',
   'https://www.tabuloo.com',
-  'https://tabuloo.com',
-  'https://www.govupalu.com',
-  'https://govupalu.vercel.app',
-  'https://govupalu.com'
+  'https://tabuloo.com'
 ];
 
 // Custom CORS middleware to handle origin properly
@@ -124,8 +120,7 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 // Routes
-// app.use('/api/payment', paymentRoutes);
-app.use('/api/auth', authRoutes);
+app.use('/api/payment', paymentRoutes);
 
 // Email API route
 app.post('/api/send-email', async (req, res) => {
@@ -211,11 +206,26 @@ app.post('/api/create-order', async (req, res) => {
   try {
     const { amount, currency = 'INR', receipt, notes } = req.body;
 
+    // Debug logging
+    console.log('📊 Payment Request Debug:');
+    console.log('📊 Raw amount received:', amount);
+    console.log('📊 Amount type:', typeof amount);
+    console.log('📊 Currency:', currency);
+
     // Validate required fields
     if (!amount) {
       return res.status(400).json({
         success: false,
         message: 'Amount is required'
+      });
+    }
+
+    // Convert amount to number if it's a string
+    const numericAmount = parseFloat(amount);
+    if (isNaN(numericAmount)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Amount must be a valid number'
       });
     }
 
@@ -235,9 +245,16 @@ app.post('/api/create-order', async (req, res) => {
       key_secret: process.env.RAZORPAY_KEY_SECRET
     });
 
+    // Use amount directly (no paise conversion)
+    const finalAmount = Math.round(numericAmount);
+    
+    console.log('📊 Amount conversion:');
+    console.log('📊 Original amount:', numericAmount);
+    console.log('📊 Final amount (no conversion):', finalAmount);
+
     // Create order options
     const options = {
-      amount: amount * 100, // Convert to paise (smallest currency unit)
+      amount: finalAmount,
       currency,
       receipt: receipt || `receipt_${Date.now()}`,
       notes: notes || {}
@@ -258,7 +275,12 @@ app.post('/api/create-order', async (req, res) => {
         status: order.status,
         created_at: order.created_at
       },
-      key_id: process.env.RAZORPAY_KEY_ID
+      key_id: process.env.RAZORPAY_KEY_ID,
+      debug: {
+        originalAmount: numericAmount,
+        finalAmount: finalAmount,
+        razorpayAmount: order.amount
+      }
     });
 
   } catch (error) {
@@ -330,11 +352,26 @@ app.post('/api/payment', async (req, res) => {
   try {
     const { amount, currency = 'INR', customer, order } = req.body;
     
+    // Debug logging
+    console.log('📊 Payment Request Debug (/api/payment):');
+    console.log('📊 Raw amount received:', amount);
+    console.log('📊 Amount type:', typeof amount);
+    console.log('📊 Currency:', currency);
+    
     // Validate required fields
     if (!amount) {
       return res.status(400).json({
         success: false,
         message: 'Amount is required'
+      });
+    }
+
+    // Convert amount to number if it's a string
+    const numericAmount = parseFloat(amount);
+    if (isNaN(numericAmount)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Amount must be a valid number'
       });
     }
 
@@ -353,9 +390,16 @@ app.post('/api/payment', async (req, res) => {
       key_secret: process.env.RAZORPAY_KEY_SECRET
     });
     
+    // Use amount directly (no paise conversion)
+    const finalAmount = Math.round(numericAmount);
+    
+    console.log('📊 Amount conversion (/api/payment):');
+    console.log('📊 Original amount:', numericAmount);
+    console.log('📊 Final amount (no conversion):', finalAmount);
+    
     // Create Razorpay order
     const razorpayOrder = await razorpay.orders.create({
-      amount: amount * 100, // amount in paise
+      amount: finalAmount,
       currency: currency,
       receipt: `order_${Date.now()}`
     });
@@ -365,7 +409,12 @@ app.post('/api/payment', async (req, res) => {
       order_id: razorpayOrder.id,
       amount: razorpayOrder.amount,
       currency: razorpayOrder.currency,
-      key_id: process.env.RAZORPAY_KEY_ID // Add this to check which key is being used
+      key_id: process.env.RAZORPAY_KEY_ID,
+      debug: {
+        originalAmount: numericAmount,
+        finalAmount: finalAmount,
+        razorpayAmount: razorpayOrder.amount
+      }
     });
   } catch (error) {
     console.error('Payment creation error:', error);
@@ -656,8 +705,7 @@ app.get('/health', (req, res) => {
   const serviceStatus = {
     razorpay: !!(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET),
     twilio: !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_PHONE_NUMBER),
-    smtp: !!(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS),
-    firebase: !!(process.env.FIREBASE_PROJECT_ID || process.env.GOOGLE_APPLICATION_CREDENTIALS)
+    smtp: !!(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS)
   };
 
   const response = {
