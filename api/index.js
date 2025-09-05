@@ -21,6 +21,16 @@ function getRazorpayInstance() {
   });
 }
 
+// Normalize incoming amount to paise to avoid double-multiplication
+function normalizeAmountToPaise(inputAmount) {
+  const numeric = Number(inputAmount);
+  if (!isFinite(numeric) || isNaN(numeric)) return NaN;
+  // If looks like already paise (e.g., 27000) keep as-is
+  if (Number.isInteger(numeric) && numeric >= 1000) return Math.round(numeric);
+  // Otherwise treat as rupees and convert to paise
+  return Math.round(numeric * 100);
+}
+
 // CORS configuration using cors package
 const corsOptions = {
   origin: [
@@ -52,7 +62,7 @@ app.post('/api/create-order', async (req, res) => {
 
     // Create order options
     const options = {
-      amount: Math.round(Number(amount) * 100), // convert INR to paise
+      amount: normalizeAmountToPaise(amount),
       currency,
       receipt: receipt || `receipt_${Date.now()}`,
       notes: notes || {}
@@ -67,7 +77,8 @@ app.post('/api/create-order', async (req, res) => {
       success: true,
       order: {
         id: order.id,
-        amount: order.amount,
+        amount_paise: order.amount,
+        amount: Math.round(order.amount / 100),
         currency: order.currency,
         receipt: order.receipt,
         status: order.status,
@@ -164,7 +175,7 @@ app.post('/api/payment', async (req, res) => {
     
     // Create Razorpay order
     const razorpayOrder = await razorpay.orders.create({
-      amount: Math.round(Number(amount) * 100), // convert INR to paise
+      amount: normalizeAmountToPaise(amount),
       currency: currency,
       receipt: `order_${Date.now()}`
     });
@@ -172,7 +183,8 @@ app.post('/api/payment', async (req, res) => {
     res.json({
       success: true,
       order_id: razorpayOrder.id,
-      amount: razorpayOrder.amount,
+      amount_paise: razorpayOrder.amount,
+      amount: Math.round(razorpayOrder.amount / 100),
       currency: razorpayOrder.currency,
       key_id: process.env.RAZORPAY_KEY_ID // Add this to check which key is being used
     });

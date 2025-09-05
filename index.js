@@ -108,6 +108,16 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 // Routes
 app.use('/api/payment', paymentRoutes);
+// Normalize incoming amount to paise to avoid double-multiplication
+function normalizeAmountToPaise(inputAmount) {
+  const numeric = Number(inputAmount);
+  if (!isFinite(numeric) || isNaN(numeric)) return NaN;
+  // If looks like already paise (e.g., 27000) keep as-is
+  if (Number.isInteger(numeric) && numeric >= 1000) return Math.round(numeric);
+  // Otherwise treat as rupees and convert to paise
+  return Math.round(numeric * 100);
+}
+
 
 // Email API route
 app.post('/api/send-email', async (req, res) => {
@@ -232,8 +242,8 @@ app.post('/api/create-order', async (req, res) => {
       key_secret: process.env.RAZORPAY_KEY_SECRET
     });
 
-    // Convert to paise
-    const finalAmount = Math.round(numericAmount * 100);
+    // Normalize to paise
+    const finalAmount = normalizeAmountToPaise(numericAmount);
     
     console.log('📊 Amount conversion:');
     console.log('📊 Original amount:', numericAmount);
@@ -256,7 +266,8 @@ app.post('/api/create-order', async (req, res) => {
       success: true,
       order: {
         id: order.id,
-        amount: order.amount,
+        amount_paise: order.amount,
+        amount: Math.round(order.amount / 100),
         currency: order.currency,
         receipt: order.receipt,
         status: order.status,
@@ -390,8 +401,8 @@ app.post('/api/payment', async (req, res) => {
       key_secret: process.env.RAZORPAY_KEY_SECRET
     });
     
-    // Convert to paise
-    const finalAmount = Math.round(numericAmount * 100);
+    // Normalize to paise
+    const finalAmount = normalizeAmountToPaise(numericAmount);
     
     console.log('📊 Amount conversion (/api/payment):');
     console.log('📊 Original amount:', numericAmount);
@@ -409,7 +420,8 @@ app.post('/api/payment', async (req, res) => {
     res.json({
       success: true,
       order_id: razorpayOrder.id,
-      amount: razorpayOrder.amount,
+      amount_paise: razorpayOrder.amount,
+      amount: Math.round(razorpayOrder.amount / 100),
       currency: razorpayOrder.currency,
       key_id: process.env.RAZORPAY_KEY_ID,
       debug: {
