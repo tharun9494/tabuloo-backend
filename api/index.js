@@ -39,25 +39,41 @@ const allowedOrigins = [
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   
-  // Clear any existing CORS headers first
-  res.removeHeader('Access-Control-Allow-Origin');
-  res.removeHeader('Access-Control-Allow-Credentials');
-  res.removeHeader('Access-Control-Allow-Methods');
-  res.removeHeader('Access-Control-Allow-Headers');
+  console.log('🔧 CORS Middleware - Origin:', origin);
+  console.log('🔧 CORS Middleware - Method:', req.method);
+  console.log('🔧 CORS Middleware - Path:', req.path);
   
-  // Set CORS headers
-  if (allowedOrigins.includes(origin)) {
-    res.header('Access-Control-Allow-Origin', origin);
+  // Set CORS headers - only set if not already set
+  if (!res.getHeader('Access-Control-Allow-Origin')) {
+    if (allowedOrigins.includes(origin)) {
+      res.header('Access-Control-Allow-Origin', origin);
+      console.log('✅ CORS: Allowed origin from list:', origin);
+    } else if (origin && origin.includes('tabuloo.com')) {
+      res.header('Access-Control-Allow-Origin', origin);
+      console.log('✅ CORS: Allowed tabuloo.com origin:', origin);
+    } else {
+      // For requests without origin (like Postman, curl)
+      res.header('Access-Control-Allow-Origin', '*');
+      console.log('✅ CORS: Using wildcard for origin:', origin);
+    }
   } else {
-    // For requests without origin (like Postman, curl)
-    res.header('Access-Control-Allow-Origin', '*');
+    console.log('⚠️ CORS: Origin header already set:', res.getHeader('Access-Control-Allow-Origin'));
   }
   
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-razorpay-signature');
+  if (!res.getHeader('Access-Control-Allow-Credentials')) {
+    res.header('Access-Control-Allow-Credentials', 'true');
+  }
+  
+  if (!res.getHeader('Access-Control-Allow-Methods')) {
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  }
+  
+  if (!res.getHeader('Access-Control-Allow-Headers')) {
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-razorpay-signature');
+  }
   
   if (req.method === 'OPTIONS') {
+    console.log('🔄 CORS: Handling OPTIONS preflight');
     res.sendStatus(200);
     return;
   }

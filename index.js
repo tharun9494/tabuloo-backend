@@ -86,6 +86,13 @@ const smsService = new TwilioSMSService();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Set timeout for all requests (30 seconds)
+app.use((req, res, next) => {
+  req.setTimeout(30000); // 30 seconds
+  res.setTimeout(30000); // 30 seconds
+  next();
+});
+
 // CORS configuration
 const allowedOrigins = [
   'http://localhost:3000',
@@ -361,6 +368,19 @@ app.post('/api/verify-payment', async (req, res) => {
   }
 });
 
+// Retry function for payment operations
+async function retryPaymentOperation(operation, maxRetries = 3, delay = 1000) {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await operation();
+    } catch (error) {
+      console.log(`🔄 Payment attempt ${i + 1} failed:`, error.message);
+      if (i === maxRetries - 1) throw error;
+      await new Promise(resolve => setTimeout(resolve, delay * (i + 1)));
+    }
+  }
+}
+
 // Required routes as specified by user
 app.post('/api/payment', async (req, res) => {
   try {
@@ -411,11 +431,13 @@ app.post('/api/payment', async (req, res) => {
     console.log('📊 Original amount:', numericAmount);
     console.log('📊 Final amount (no conversion):', finalAmount);
     
-    // Create Razorpay order
-    const razorpayOrder = await razorpay.orders.create({
-      amount: finalAmount,
-      currency: currency,
-      receipt: `order_${Date.now()}`
+    // Create Razorpay order with retry logic
+    const razorpayOrder = await retryPaymentOperation(async () => {
+      return await razorpay.orders.create({
+        amount: finalAmount,
+        currency: currency,
+        receipt: `order_${Date.now()}`
+      });
     });
     
     res.json({
@@ -708,6 +730,41 @@ app.get('/api/health', (req, res) => {
     timestamp: new Date().toISOString(),
     version: '1.0.0'
   });
+});
+
+// Payment service health check
+app.get('/api/payment/health', async (req, res) => {
+  try {
+    // Test Razorpay connection
+    const Razorpay = require('razorpay');
+    const razorpay = new Razorpay({
+      key_id: process.env.RAZORPAY_KEY_ID,
+      key_secret: process.env.RAZORPAY_KEY_SECRET
+    });
+    
+    const testOrder = await razorpay.orders.create({
+      amount: 100,
+      currency: 'INR',
+      receipt: `health_check_${Date.now()}`
+    });
+    
+    res.json({
+      status: 'OK',
+      message: 'Payment service is healthy',
+      razorpay: {
+        connected: true,
+        testOrderId: testOrder.id
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'ERROR',
+      message: 'Payment service is not healthy',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
 });
 
 // Health check endpoint
