@@ -1,5 +1,4 @@
 const express = require('express');
-const cors = require('cors');
 const bodyParser = require('body-parser');
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
@@ -21,7 +20,7 @@ function getRazorpayInstance() {
   });
 }
 
-// CORS configuration for Vercel
+// CORS configuration
 const allowedOrigins = [
   "http://localhost:3000",
   "http://localhost:3001",
@@ -34,15 +33,36 @@ const allowedOrigins = [
   "https://govupalu.vercel.app"
 ];
 
-// Custom CORS middleware to handle origin properly
+// Custom CORS middleware to handle origin and preflight properly
 app.use((req, res, next) => {
   const origin = req.headers.origin;
-  if (allowedOrigins.includes(origin)) {
-    res.setHeader("Access-Control-Allow-Origin", origin);
+
+  // Determine if origin is allowed (exact match or any *.vercel.app)
+  let isAllowed = false;
+  if (!origin) {
+    isAllowed = true; // non-browser or same-origin requests
+  } else {
+    try {
+      const hostname = new URL(origin).hostname;
+      isAllowed = allowedOrigins.includes(origin) || /\.vercel\.app$/.test(hostname);
+    } catch (_) {
+      isAllowed = false;
+    }
   }
-  res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+  if (isAllowed) {
+    res.setHeader("Access-Control-Allow-Origin", origin || "*");
+    res.setHeader("Vary", "Origin");
+  }
+
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, x-razorpay-signature, X-Requested-With");
   res.setHeader("Access-Control-Allow-Credentials", "true");
+
+  if (req.method === 'OPTIONS') {
+    return res.status(204).end();
+  }
+
   next();
 });
 
